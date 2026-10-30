@@ -1,0 +1,13 @@
+# Merged on top of the root docker-compose.yml: relative paths resolve from the repository root.
+services:
+  dev:
+    build:
+      context: .devcontainer
+    command: sleep infinity
+    volumes:
+      - .:/workspace:cached
+    environment:
+      DATABASE_URL: postgres://ads:ads@ads-database:5432/ads?sslmode=disable
+    depends_on:
+      ads-database:
+        condition: service_healthy

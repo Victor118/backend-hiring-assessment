@@ -1,0 +1,16 @@
+{
+  "name": "ads-api (Go 1.26 + Postgres 16)",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.yml"],
+  "service": "dev",
+  // The API is run from the dev container, so the ads-api service is not started.
+  "runServices": ["dev", "ads-database"],
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "remoteUser": "vscode",
+  "postCreateCommand": "go mod download",
+  "customizations": {
+    "vscode": {
+      "extensions": ["golang.go"]
+    }
+  }
+}
