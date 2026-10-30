@@ -178,6 +178,18 @@ func (d *DAO) CreateAd(ctx context.Context, req adsdao.CreateAdRequest) (domain.
 	return id, nil
 }
 
+// DeleteAd deletes a single ad.
+func (d *DAO) DeleteAd(ctx context.Context, req adsdao.DeleteAdRequest) error {
+	const query = `DELETE FROM ads WHERE id = $1`
+
+	_, err := d.runner().ExecContext(ctx, query, int64(req.ID))
+	if err != nil {
+		return fmt.Errorf("unable to delete ad: %w", err)
+	}
+
+	return nil
+}
+
 func scanAd(row *sql.Row) (domain.Ad, error) {
 	var ad domain.Ad
 	if err := row.Scan(&ad.ID, &ad.Title, &ad.Price, &ad.PhotoURL, &ad.UserID, &ad.CreatedAt); err != nil {
