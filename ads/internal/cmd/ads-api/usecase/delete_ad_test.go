@@ -16,13 +16,14 @@ func TestDeleteAd(t *testing.T) {
 	ctx := context.Background()
 	adID := domain.AdID(1)
 	deleteRequest := usecase.DeleteAdRequest{
-		ID: adID,
+		ID:          adID,
+		RequesterID: "bob",
 	}
 
-	t.Run("nominal", func(t *testing.T) {
+	t.Run("owner deletes the ad", func(t *testing.T) {
 		//given
 		dao := mockdao.New(t)
-		dao.On("GetAdByID", ctx, deleteRequest.ID).Return(domain.Ad{ID: 1}, nil)
+		dao.On("GetAdByID", ctx, deleteRequest.ID).Return(domain.Ad{ID: 1, UserID: "bob"}, nil)
 		dao.On("DeleteAd", ctx, adID).Return(nil)
 		deleteAd := usecase.NewDeleteAdFunc(dao)
 		//when
@@ -47,7 +48,7 @@ func TestDeleteAd(t *testing.T) {
 	t.Run("returns error when delete fails", func(t *testing.T) {
 		//given
 		dao := mockdao.New(t)
-		dao.On("GetAdByID", ctx, deleteRequest.ID).Return(domain.Ad{ID: 1}, nil)
+		dao.On("GetAdByID", ctx, deleteRequest.ID).Return(domain.Ad{ID: 1, UserID: "bob"}, nil)
 		dbDown := errors.New("db down")
 		dao.On("DeleteAd", ctx, adID).Return(dbDown)
 		deleteAd := usecase.NewDeleteAdFunc(dao)
@@ -55,5 +56,17 @@ func TestDeleteAd(t *testing.T) {
 		err := deleteAd(ctx, deleteRequest)
 		//then
 		require.ErrorIs(t, err, dbDown)
+	})
+
+	t.Run("returns error when user is not owner", func(t *testing.T) {
+		//given
+		dao := mockdao.New(t)
+		dao.On("GetAdByID", ctx, deleteRequest.ID).Return(domain.Ad{ID: 1, UserID: "alice"}, nil)
+		deleteAd := usecase.NewDeleteAdFunc(dao)
+		//when
+		err := deleteAd(ctx, deleteRequest)
+		//then
+		require.ErrorIs(t, err, domain.ErrNotOwner)
+		dao.AssertNotCalled(t, "DeleteAd", mock.Anything, mock.Anything)
 	})
 }

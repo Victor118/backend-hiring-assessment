@@ -12,9 +12,10 @@ type (
 	// DeleteAdFunc deletes an ad. It fails with domain.ErrAdNotFound when no ad matches the identifier.
 	DeleteAdFunc func(ctx context.Context, req DeleteAdRequest) error
 
-	// DeleteAdRequest describes the ID of the ad to delete.
+	// DeleteAdRequest describes the ad to delete and the user asking for it.
 	DeleteAdRequest struct {
-		ID domain.AdID
+		ID          domain.AdID
+		RequesterID domain.UserID
 	}
 
 	deleteAd struct {
@@ -28,9 +29,13 @@ func NewDeleteAdFunc(adRepository ports.AdRepository) DeleteAdFunc {
 }
 
 func (uc deleteAd) deleteAd(ctx context.Context, req DeleteAdRequest) error {
-	_, err := uc.adRepository.GetAdByID(ctx, req.ID)
+	ad, err := uc.adRepository.GetAdByID(ctx, req.ID)
 	if err != nil {
 		return fmt.Errorf("unable to get ad %s: %w", req.ID, err)
+	}
+
+	if ad.UserID != req.RequesterID {
+		return fmt.Errorf("unable to delete ad %s: %w", req.ID, domain.ErrNotOwner)
 	}
 
 	err = uc.adRepository.DeleteAd(ctx, req.ID)
