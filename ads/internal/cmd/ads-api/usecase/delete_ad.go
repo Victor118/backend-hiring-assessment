@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	// DeleteAdFunc deletes an ad. It fails with dao.ErrNotFound when no ad matches the identifier.
+	// DeleteAdFunc deletes an ad. It fails with domain.ErrAdNotFound when no ad matches the identifier.
 	DeleteAdFunc func(ctx context.Context, req DeleteAdRequest) error
 
 	// DeleteAdRequest describes the ID of the ad to delete.

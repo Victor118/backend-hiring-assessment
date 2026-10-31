@@ -38,14 +38,14 @@ func TestDeleteAd(t *testing.T) {
 	t.Run("ad not found", func(t *testing.T) {
 		//given
 		dao := mockdao.New(t)
-		dao.On("GetAdByID", ctx, domain.AdID(1)).Return(domain.Ad{}, adsdao.ErrNotFound)
+		dao.On("GetAdByID", ctx, domain.AdID(1)).Return(domain.Ad{}, domain.ErrAdNotFound)
 
 		deleteAd := usecase.NewDeleteAdFunc(dao)
 		//when
 		err := deleteAd(ctx, deleteRequest)
 		//then
 		dao.AssertNotCalled(t, "DeleteAd", mock.Anything, mock.Anything)
-		require.ErrorIs(t, err, adsdao.ErrNotFound)
+		require.ErrorIs(t, err, domain.ErrAdNotFound)
 	})
 
 	t.Run("returns error when delete fails", func(t *testing.T) {

@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 )
@@ -73,7 +72,7 @@ func TestHandlerGetAd(t *testing.T) {
 
 	t.Run("returns 404 when ad does not exist", func(t *testing.T) {
 		srv := newGetAdServer(func(_ context.Context, _ domain.AdID) (domain.Ad, error) {
-			return domain.Ad{}, adsdao.ErrNotFound
+			return domain.Ad{}, domain.ErrAdNotFound
 		})
 		defer srv.Close()
 

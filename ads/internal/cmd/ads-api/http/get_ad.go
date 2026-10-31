@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 )
@@ -42,7 +41,7 @@ func handlerGetAd(getAd usecase.GetAdByIDFunc) http.HandlerFunc {
 
 		ad, err := getAd(r.Context(), adID)
 		if err != nil {
-			if errors.Is(err, adsdao.ErrNotFound) {
+			if errors.Is(err, domain.ErrAdNotFound) {
 				rw.WriteHeader(http.StatusNotFound)
 			} else {
 				rw.WriteHeader(http.StatusInternalServerError)

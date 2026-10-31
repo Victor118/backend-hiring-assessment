@@ -99,7 +99,7 @@ func TestGetAdByID(t *testing.T) {
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("returns ErrNotFound when no row", func(t *testing.T) {
+	t.Run("returns ErrAdNotFound when no row", func(t *testing.T) {
 		dao, mock := newMockDAO(t)
 		mock.ExpectQuery("SELECT").
 			WithArgs(int64(99)).
@@ -108,7 +108,7 @@ func TestGetAdByID(t *testing.T) {
 		_, err := dao.GetAdByID(ctx, 99)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, adsdao.ErrNotFound)
+		assert.ErrorIs(t, err, domain.ErrAdNotFound)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -192,7 +192,7 @@ func TestCreateAd(t *testing.T) {
 		_, err := dao.CreateAd(ctx, req)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, adsdao.ErrUnknownOwner)
+		assert.ErrorIs(t, err, domain.ErrUnknownOwner)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -207,7 +207,7 @@ func TestCreateAd(t *testing.T) {
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, boom)
-		assert.NotErrorIs(t, err, adsdao.ErrUnknownOwner)
+		assert.NotErrorIs(t, err, domain.ErrUnknownOwner)
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 }

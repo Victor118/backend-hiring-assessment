@@ -10,7 +10,7 @@ import (
 type Store interface {
 	// CreateAd inserts an ad and returns its generated identifier.
 	CreateAd(ctx context.Context, req CreateAdRequest) (domain.AdID, error)
-	// GetAdByID returns a single ad, or ErrNotFound.
+	// GetAdByID returns a single ad, or ErrAdNotFound.
 	GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error)
 	// SearchAds returns all ads matching the filters.
 	SearchAds(ctx context.Context, req SearchAdsRequest) ([]domain.Ad, error)
@@ -54,15 +54,3 @@ type CreateAdRequest struct {
 type DeleteAdRequest struct {
 	ID domain.AdID
 }
-
-const (
-	// ErrNotFound is returned when no ad matches the requested identifier.
-	ErrNotFound sentinelError = "ad not found"
-	// ErrUnknownOwner is returned when an ad references a user that does not exist.
-	ErrUnknownOwner sentinelError = "unknown owner"
-)
-
-type sentinelError string
-
-// Error implements the error interface.
-func (e sentinelError) Error() string { return string(e) }

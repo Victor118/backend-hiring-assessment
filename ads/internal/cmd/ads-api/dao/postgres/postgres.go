@@ -145,7 +145,7 @@ func (d *DAO) SearchAds(ctx context.Context, req adsdao.SearchAdsRequest) ([]dom
 	return ads, nil
 }
 
-// GetAdByID returns a single ad, or dao.ErrNotFound.
+// GetAdByID returns a single ad, or domain.ErrAdNotFound.
 func (d *DAO) GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error) {
 	const query = `SELECT ` + adColumns + ` FROM ads WHERE id = $1`
 
@@ -169,7 +169,7 @@ func (d *DAO) CreateAd(ctx context.Context, req adsdao.CreateAdRequest) (domain.
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
-			return 0, fmt.Errorf("unable to create ad: %w", adsdao.ErrUnknownOwner)
+			return 0, fmt.Errorf("unable to create ad: %w", domain.ErrUnknownOwner)
 		}
 
 		return 0, fmt.Errorf("unable to create ad: %w", err)
@@ -194,7 +194,7 @@ func scanAd(row *sql.Row) (domain.Ad, error) {
 	var ad domain.Ad
 	if err := row.Scan(&ad.ID, &ad.Title, &ad.Price, &ad.PhotoURL, &ad.UserID, &ad.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return domain.Ad{}, adsdao.ErrNotFound
+			return domain.Ad{}, domain.ErrAdNotFound
 		}
 
 		return domain.Ad{}, err

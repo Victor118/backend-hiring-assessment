@@ -55,14 +55,14 @@ func TestMock_GetAdByID(t *testing.T) {
 		assert.Equal(t, want, got)
 	})
 
-	t.Run("returns ErrNotFound", func(t *testing.T) {
+	t.Run("returns ErrAdNotFound", func(t *testing.T) {
 		m := mock.New(t)
 
-		m.On("GetAdByID", ctx, domain.AdID(99)).Return(domain.Ad{}, adsdao.ErrNotFound)
+		m.On("GetAdByID", ctx, domain.AdID(99)).Return(domain.Ad{}, domain.ErrAdNotFound)
 
 		_, err := m.GetAdByID(ctx, 99)
 
-		assert.ErrorIs(t, err, adsdao.ErrNotFound)
+		assert.ErrorIs(t, err, domain.ErrAdNotFound)
 	})
 }
 
@@ -93,11 +93,11 @@ func TestMock_CreateAd(t *testing.T) {
 			OwnerID:    "ghost",
 		}
 
-		m.On("CreateAd", ctx, req).Return(domain.AdID(0), adsdao.ErrUnknownOwner)
+		m.On("CreateAd", ctx, req).Return(domain.AdID(0), domain.ErrUnknownOwner)
 
 		_, err := m.CreateAd(ctx, req)
 
-		assert.ErrorIs(t, err, adsdao.ErrUnknownOwner)
+		assert.ErrorIs(t, err, domain.ErrUnknownOwner)
 	})
 }
 

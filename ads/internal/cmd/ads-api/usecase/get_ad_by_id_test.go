@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	mockdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao/mock"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
@@ -29,12 +28,12 @@ func TestGetAdByID(t *testing.T) {
 
 	t.Run("error no ad found", func(t *testing.T) {
 		m := mockdao.New(t)
-		m.On("GetAdByID", ctx, domain.AdID(99)).Return(domain.Ad{}, adsdao.ErrNotFound)
+		m.On("GetAdByID", ctx, domain.AdID(99)).Return(domain.Ad{}, domain.ErrAdNotFound)
 
 		_, err := usecase.NewGetAdByIDFunc(m)(ctx, 99)
 
 		require.Error(t, err)
-		assert.ErrorIs(t, err, adsdao.ErrNotFound)
+		assert.ErrorIs(t, err, domain.ErrAdNotFound)
 	})
 
 	t.Run("error from dao", func(t *testing.T) {
