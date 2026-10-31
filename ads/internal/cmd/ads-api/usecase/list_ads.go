@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 type (
@@ -21,17 +21,17 @@ type (
 	}
 
 	listAds struct {
-		adDAO adsdao.DAO
+		adRepository ports.AdRepository
 	}
 )
 
 // NewListAdsFunc returns a new ListAdsFunc.
-func NewListAdsFunc(adDAO adsdao.DAO) ListAdsFunc {
-	return listAds{adDAO: adDAO}.listAds
+func NewListAdsFunc(adRepository ports.AdRepository) ListAdsFunc {
+	return listAds{adRepository: adRepository}.listAds
 }
 
 func (uc listAds) listAds(ctx context.Context, req ListAdsRequest) ([]domain.Ad, error) {
-	ads, err := uc.adDAO.SearchAds(ctx, adsdao.SearchAdsRequest{
+	ads, err := uc.adRepository.SearchAds(ctx, ports.AdFilter{
 		OwnerID:       req.OwnerID,
 		MinPriceCents: req.MinPriceCents,
 		MaxPriceCents: req.MaxPriceCents,

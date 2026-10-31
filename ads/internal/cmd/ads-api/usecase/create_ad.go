@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 type (
@@ -21,17 +21,17 @@ type (
 	}
 
 	createAd struct {
-		adDAO adsdao.DAO
+		adRepository ports.AdRepository
 	}
 )
 
-// NewCreateAdFunc returns a CreateAdFunc backed by the given DAO.
-func NewCreateAdFunc(adDAO adsdao.DAO) CreateAdFunc {
-	return createAd{adDAO: adDAO}.createAd
+// NewCreateAdFunc returns a CreateAdFunc backed by the given repository.
+func NewCreateAdFunc(adRepository ports.AdRepository) CreateAdFunc {
+	return createAd{adRepository: adRepository}.createAd
 }
 
 func (uc createAd) createAd(ctx context.Context, req CreateAdRequest) (domain.AdID, error) {
-	adID, err := uc.adDAO.CreateAd(ctx, adsdao.CreateAdRequest{
+	adID, err := uc.adRepository.CreateAd(ctx, ports.NewAd{
 		Title:      req.Title,
 		PriceCents: req.PriceCents,
 		PhotoURL:   req.PhotoURL,

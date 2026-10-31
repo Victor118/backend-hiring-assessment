@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao/mock"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 var ctx = context.Background()
@@ -17,7 +17,7 @@ var ctx = context.Background()
 func TestMock_SearchAds(t *testing.T) {
 	t.Run("returns configured ads", func(t *testing.T) {
 		m := mock.New(t)
-		req := adsdao.SearchAdsRequest{Title: "bike"}
+		req := ports.AdFilter{Title: "bike"}
 		want := []domain.Ad{{ID: 1, Title: "bike", Price: 5000}}
 
 		m.On("SearchAds", ctx, req).Return(want, nil)
@@ -30,7 +30,7 @@ func TestMock_SearchAds(t *testing.T) {
 
 	t.Run("returns nil slice on error", func(t *testing.T) {
 		m := mock.New(t)
-		req := adsdao.SearchAdsRequest{Title: "bike"}
+		req := ports.AdFilter{Title: "bike"}
 		boom := errors.New("db down")
 
 		m.On("SearchAds", ctx, req).Return(nil, boom)
@@ -69,7 +69,7 @@ func TestMock_GetAdByID(t *testing.T) {
 func TestMock_CreateAd(t *testing.T) {
 	t.Run("returns generated ID", func(t *testing.T) {
 		m := mock.New(t)
-		req := adsdao.CreateAdRequest{
+		req := ports.NewAd{
 			Title:      "bike",
 			PriceCents: 5000,
 			PhotoURL:   "https://example.com/bike.jpg",
@@ -86,7 +86,7 @@ func TestMock_CreateAd(t *testing.T) {
 
 	t.Run("returns ErrUnknownOwner when owner does not exist", func(t *testing.T) {
 		m := mock.New(t)
-		req := adsdao.CreateAdRequest{
+		req := ports.NewAd{
 			Title:      "bike",
 			PriceCents: 5000,
 			PhotoURL:   "https://example.com/bike.jpg",

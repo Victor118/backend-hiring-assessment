@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 type (
@@ -13,17 +13,17 @@ type (
 	GetAdByIDFunc func(ctx context.Context, id domain.AdID) (domain.Ad, error)
 
 	getAdByID struct {
-		adDAO adsdao.DAO
+		adRepository ports.AdRepository
 	}
 )
 
-// NewGetAdByIDFunc returns a GetAdByIDFunc backed by the given DAO.
-func NewGetAdByIDFunc(adDAO adsdao.DAO) GetAdByIDFunc {
-	return getAdByID{adDAO: adDAO}.getAdByID
+// NewGetAdByIDFunc returns a GetAdByIDFunc backed by the given repository.
+func NewGetAdByIDFunc(adRepository ports.AdRepository) GetAdByIDFunc {
+	return getAdByID{adRepository: adRepository}.getAdByID
 }
 
 func (uc getAdByID) getAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error) {
-	found, err := uc.adDAO.GetAdByID(ctx, id)
+	found, err := uc.adRepository.GetAdByID(ctx, id)
 	if err != nil {
 		return domain.Ad{}, fmt.Errorf("unable to get ad %s: %w", id, err)
 	}

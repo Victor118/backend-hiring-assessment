@@ -11,6 +11,7 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 const adColumns = `id, title, price_cents, photo_url, user_id::text, created_at`
@@ -18,7 +19,7 @@ const adColumns = `id, title, price_cents, photo_url, user_id::text, created_at`
 // DAO is a PostgreSQL-backed ad store.
 type DAO struct {
 	db *sql.DB
-	// tx is set when the DAO is scoped to a transaction opened by WithTx.
+	// tx is set when the DAO is scoped to a transaction opened by Begin.
 	tx *sql.Tx
 }
 
@@ -108,7 +109,7 @@ func (d *DAO) Rollback() error {
 }
 
 // SearchAds returns all ads matching the filters.
-func (d *DAO) SearchAds(ctx context.Context, req adsdao.SearchAdsRequest) ([]domain.Ad, error) {
+func (d *DAO) SearchAds(ctx context.Context, filter ports.AdFilter) ([]domain.Ad, error) {
 	const query = `
 		SELECT ` + adColumns + `
 		FROM ads
@@ -118,10 +119,10 @@ func (d *DAO) SearchAds(ctx context.Context, req adsdao.SearchAdsRequest) ([]dom
 		  AND ($4 = '' OR title ILIKE '%' || $4 || '%')`
 
 	rows, err := d.runner().QueryContext(ctx, query,
-		req.OwnerID,
-		req.MinPriceCents,
-		req.MaxPriceCents,
-		req.Title,
+		filter.OwnerID,
+		filter.MinPriceCents,
+		filter.MaxPriceCents,
+		filter.Title,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("unable to search ads: %w", err)
@@ -158,14 +159,14 @@ func (d *DAO) GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error) 
 }
 
 // CreateAd inserts an ad and returns its generated identifier.
-func (d *DAO) CreateAd(ctx context.Context, req adsdao.CreateAdRequest) (domain.AdID, error) {
+func (d *DAO) CreateAd(ctx context.Context, ad ports.NewAd) (domain.AdID, error) {
 	const query = `
 		INSERT INTO ads (title, price_cents, photo_url, user_id)
 		VALUES ($1, $2, $3, $4::uuid)
 		RETURNING id`
 
 	var id domain.AdID
-	err := d.runner().QueryRowContext(ctx, query, req.Title, req.PriceCents, req.PhotoURL, string(req.OwnerID)).Scan(&id)
+	err := d.runner().QueryRowContext(ctx, query, ad.Title, ad.PriceCents, ad.PhotoURL, string(ad.OwnerID)).Scan(&id)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
@@ -179,10 +180,10 @@ func (d *DAO) CreateAd(ctx context.Context, req adsdao.CreateAdRequest) (domain.
 }
 
 // DeleteAd deletes a single ad.
-func (d *DAO) DeleteAd(ctx context.Context, req adsdao.DeleteAdRequest) error {
+func (d *DAO) DeleteAd(ctx context.Context, id domain.AdID) error {
 	const query = `DELETE FROM ads WHERE id = $1`
 
-	_, err := d.runner().ExecContext(ctx, query, int64(req.ID))
+	_, err := d.runner().ExecContext(ctx, query, int64(id))
 	if err != nil {
 		return fmt.Errorf("unable to delete ad: %w", err)
 	}

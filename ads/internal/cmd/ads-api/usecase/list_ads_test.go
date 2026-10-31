@@ -7,9 +7,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao/mock"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 )
 
@@ -23,7 +23,7 @@ func TestListAds(t *testing.T) {
 				{ID: 1, Title: "bike", Price: 5000, UserID: "user-1"},
 				{ID: 2, Title: "scooter", Price: 12000, UserID: "user-2"},
 			}
-			req := adsdao.SearchAdsRequest{Title: "bike"}
+			req := ports.AdFilter{Title: "bike"}
 			m.On("SearchAds", ctx, req).Return(want, nil)
 
 			got, err := usecase.NewListAdsFunc(m)(ctx, usecase.ListAdsRequest{Title: "bike"})
@@ -34,7 +34,7 @@ func TestListAds(t *testing.T) {
 
 		t.Run("returns empty slice when no ads match", func(t *testing.T) {
 			m := mock.New(t)
-			m.On("SearchAds", ctx, adsdao.SearchAdsRequest{Title: "ufo"}).Return(nil, nil)
+			m.On("SearchAds", ctx, ports.AdFilter{Title: "ufo"}).Return(nil, nil)
 
 			got, err := usecase.NewListAdsFunc(m)(ctx, usecase.ListAdsRequest{Title: "ufo"})
 
@@ -43,10 +43,10 @@ func TestListAds(t *testing.T) {
 		})
 	})
 
-	t.Run("wraps DAO errors", func(t *testing.T) {
+	t.Run("wraps repository errors", func(t *testing.T) {
 		m := mock.New(t)
 		dbErr := errors.New("connection reset")
-		m.On("SearchAds", ctx, adsdao.SearchAdsRequest{}).Return(nil, dbErr)
+		m.On("SearchAds", ctx, ports.AdFilter{}).Return(nil, dbErr)
 
 		_, err := usecase.NewListAdsFunc(m)(ctx, usecase.ListAdsRequest{})
 

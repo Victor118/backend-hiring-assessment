@@ -10,8 +10,8 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 var adCols = []string{"id", "title", "price_cents", "photo_url", "user_id", "created_at"}
@@ -37,7 +37,7 @@ func TestSearchAds(t *testing.T) {
 			WithArgs("", int64(0), int64(0), "").
 			WillReturnRows(rows)
 
-		got, err := dao.SearchAds(ctx, adsdao.SearchAdsRequest{})
+		got, err := dao.SearchAds(ctx, ports.AdFilter{})
 
 		require.NoError(t, err)
 		require.Len(t, got, 2)
@@ -54,7 +54,7 @@ func TestSearchAds(t *testing.T) {
 			WithArgs("", int64(0), int64(0), "bike").
 			WillReturnRows(sqlmock.NewRows(adCols))
 
-		got, err := dao.SearchAds(ctx, adsdao.SearchAdsRequest{Title: "bike"})
+		got, err := dao.SearchAds(ctx, ports.AdFilter{Title: "bike"})
 
 		require.NoError(t, err)
 		assert.Nil(t, got)
@@ -68,7 +68,7 @@ func TestSearchAds(t *testing.T) {
 			WithArgs("", int64(0), int64(0), "").
 			WillReturnError(boom)
 
-		_, err := dao.SearchAds(ctx, adsdao.SearchAdsRequest{})
+		_, err := dao.SearchAds(ctx, ports.AdFilter{})
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, boom)
@@ -129,9 +129,7 @@ func TestGetAdByID(t *testing.T) {
 
 func TestDeleteAd(t *testing.T) {
 	ctx := context.Background()
-	req := adsdao.DeleteAdRequest{
-		ID: domain.AdID(1),
-	}
+	adID := domain.AdID(1)
 
 	t.Run("delete the ad", func(t *testing.T) {
 		dao, mock := newMockDAO(t)
@@ -139,7 +137,7 @@ func TestDeleteAd(t *testing.T) {
 			WithArgs(int64(1)).
 			WillReturnResult(sqlmock.NewResult(0, 1))
 
-		err := dao.DeleteAd(ctx, req)
+		err := dao.DeleteAd(ctx, adID)
 
 		require.NoError(t, err)
 		require.NoError(t, mock.ExpectationsWereMet())
@@ -152,7 +150,7 @@ func TestDeleteAd(t *testing.T) {
 			WithArgs(int64(1)).
 			WillReturnError(dbDown)
 
-		err := dao.DeleteAd(ctx, req)
+		err := dao.DeleteAd(ctx, adID)
 
 		require.Error(t, err)
 		assert.ErrorIs(t, err, dbDown)
@@ -162,7 +160,7 @@ func TestDeleteAd(t *testing.T) {
 
 func TestCreateAd(t *testing.T) {
 	ctx := context.Background()
-	req := adsdao.CreateAdRequest{
+	req := ports.NewAd{
 		Title:      "mountain bike",
 		PriceCents: 15000,
 		PhotoURL:   "https://example.com/bike.jpg",
@@ -214,7 +212,7 @@ func TestCreateAd(t *testing.T) {
 
 func TestTransaction(t *testing.T) {
 	ctx := context.Background()
-	req := adsdao.CreateAdRequest{
+	req := ports.NewAd{
 		Title:      "mountain bike",
 		PriceCents: 15000,
 		PhotoURL:   "https://example.com/bike.jpg",

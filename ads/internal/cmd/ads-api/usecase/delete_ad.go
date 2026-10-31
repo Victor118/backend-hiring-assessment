@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 type (
@@ -18,22 +18,22 @@ type (
 	}
 
 	deleteAd struct {
-		adDAO adsdao.DAO
+		adRepository ports.AdRepository
 	}
 )
 
-// NewDeleteAdFunc returns a DeleteAdFunc backed by the given DAO.
-func NewDeleteAdFunc(adDAO adsdao.DAO) DeleteAdFunc {
-	return deleteAd{adDAO: adDAO}.deleteAd
+// NewDeleteAdFunc returns a DeleteAdFunc backed by the given repository.
+func NewDeleteAdFunc(adRepository ports.AdRepository) DeleteAdFunc {
+	return deleteAd{adRepository: adRepository}.deleteAd
 }
 
 func (uc deleteAd) deleteAd(ctx context.Context, req DeleteAdRequest) error {
-	_, err := uc.adDAO.GetAdByID(ctx, req.ID)
+	_, err := uc.adRepository.GetAdByID(ctx, req.ID)
 	if err != nil {
 		return fmt.Errorf("unable to get ad %s: %w", req.ID, err)
 	}
 
-	err = uc.adDAO.DeleteAd(ctx, adsdao.DeleteAdRequest{ID: req.ID})
+	err = uc.adRepository.DeleteAd(ctx, req.ID)
 	if err != nil {
 		return fmt.Errorf("unable to delete ad %s: %w", req.ID, err)
 	}

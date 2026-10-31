@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 // Mock is a testify-based implementation of dao.DAO.
@@ -26,8 +27,8 @@ func New(t *testing.T) *Mock {
 }
 
 // SearchAds returns the ads and the error set on the mock.
-func (m *Mock) SearchAds(ctx context.Context, req adsdao.SearchAdsRequest) ([]domain.Ad, error) {
-	args := m.Called(ctx, req)
+func (m *Mock) SearchAds(ctx context.Context, filter ports.AdFilter) ([]domain.Ad, error) {
+	args := m.Called(ctx, filter)
 
 	ads, _ := args.Get(0).([]domain.Ad)
 
@@ -44,8 +45,8 @@ func (m *Mock) GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error)
 }
 
 // CreateAd returns the ad and the error set on the mock.
-func (m *Mock) CreateAd(ctx context.Context, req adsdao.CreateAdRequest) (domain.AdID, error) {
-	args := m.Called(ctx, req)
+func (m *Mock) CreateAd(ctx context.Context, ad ports.NewAd) (domain.AdID, error) {
+	args := m.Called(ctx, ad)
 
 	adID, _ := args.Get(0).(domain.AdID)
 
@@ -53,8 +54,8 @@ func (m *Mock) CreateAd(ctx context.Context, req adsdao.CreateAdRequest) (domain
 }
 
 // DeleteAd returns the error set on the mock.
-func (m *Mock) DeleteAd(ctx context.Context, req adsdao.DeleteAdRequest) error {
-	return m.Called(ctx, req).Error(0)
+func (m *Mock) DeleteAd(ctx context.Context, id domain.AdID) error {
+	return m.Called(ctx, id).Error(0)
 }
 
 // Begin returns the mock itself as the transaction, so expectations stay set on a single object, and the error set on the mock.
