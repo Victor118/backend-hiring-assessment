@@ -40,6 +40,7 @@ There are 2 entities in this sample:
 | `GET` | `/ads/{id}`   | no | Get a single ad                                                                   |
 | `GET` | `/ads`        | no | List ads (filterable by `title`, `user_id`, `min_price_cents`, `max_price_cents`) |
 | `POST` | `/ads/import` | yes | Bulk ad import                                                                    |
+| `DELETE` | `/ads/{id}` | yes | Delete an ad (owner only)                                                         |
 
 ```bash
 # Health check
@@ -56,6 +57,10 @@ curl -s -X POST http://localhost:8080/ads \
   -H 'Authorization: 00000000-0000-0000-0000-000000000001' \
   -H 'Content-Type: application/json' \
   -d '{"title":"Mountain bike","price_cents":12000,"photo_url":"https://example.com/photos/bike.jpg"}'
+
+# Delete an ad (requires Authorization header, only the owner can delete it)
+curl -s -X DELETE http://localhost:8080/ads/3 \
+  -H 'Authorization: 00000000-0000-0000-0000-000000000001'
 ```
 
 ## Authentication
