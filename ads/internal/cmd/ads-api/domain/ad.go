@@ -23,5 +23,14 @@ type Ad struct {
 	CreatedAt time.Time
 }
 
+// AuthorizeDeletion returns ErrNotOwner unless the given user owns the ad.
+func (a Ad) AuthorizeDeletion(by UserID) error {
+	if a.UserID != by {
+		return ErrNotOwner
+	}
+
+	return nil
+}
+
 // String returns the decimal representation of the identifier.
 func (id AdID) String() string { return strconv.FormatInt(int64(id), 10) }

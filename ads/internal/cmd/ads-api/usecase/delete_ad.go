@@ -34,8 +34,8 @@ func (uc deleteAd) deleteAd(ctx context.Context, req DeleteAdRequest) error {
 		return fmt.Errorf("unable to get ad %s: %w", req.ID, err)
 	}
 
-	if ad.UserID != req.RequesterID {
-		return fmt.Errorf("unable to delete ad %s: %w", req.ID, domain.ErrNotOwner)
+	if err := ad.AuthorizeDeletion(req.RequesterID); err != nil {
+		return fmt.Errorf("unable to delete ad %s: %w", req.ID, err)
 	}
 
 	err = uc.adRepository.DeleteAd(ctx, req.ID)
