@@ -7,6 +7,8 @@ const (
 	ErrUnknownOwner sentinelError = "unknown owner"
 	// ErrNotOwner is returned when a user acts on an ad they do not own.
 	ErrNotOwner sentinelError = "user is not owner"
+	// ErrUserNotFound is returned when the users service does not know a user.
+	ErrUserNotFound sentinelError = "user not found"
 )
 
 type sentinelError string
