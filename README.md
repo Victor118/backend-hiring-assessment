@@ -24,7 +24,7 @@ The API needs an up-and-running postgres database, which can be launched via the
 docker compose up -d
 ```
 
-This starts PostgreSQL with the schema and seed data already applied, as well as the `ads` api.
+This starts PostgreSQL with the schema and seed data already applied, the `ads` api (port 8080), and the `users` api (port 8081), which the `ads` api calls to resolve the username of an ad's owner.
 
 ## Model
 
@@ -37,7 +37,7 @@ There are 2 entities in this sample:
 | Method | Path          | Auth | Description                                                                       |
 |--------|---------------|------|-----------------------------------------------------------------------------------|
 | `POST` | `/ads`        | yes | Create an ad                                                                      |
-| `GET` | `/ads/{id}`   | no | Get a single ad                                                                   |
+| `GET` | `/ads/{id}`   | no | Get a single ad, with its owner's `username`                                      |
 | `GET` | `/ads`        | no | List ads (filterable by `title`, `user_id`, `min_price_cents`, `max_price_cents`) |
 | `POST` | `/ads/import` | yes | Bulk ad import                                                                    |
 | `DELETE` | `/ads/{id}` | yes | Delete an ad (owner only)                                                         |
@@ -62,6 +62,25 @@ curl -s -X POST http://localhost:8080/ads \
 curl -s -X DELETE http://localhost:8080/ads/3 \
   -H 'Authorization: 00000000-0000-0000-0000-000000000001'
 ```
+
+### Owner username
+
+`GET /ads/{id}` adds the `username` of the ad's owner, fetched from the `users` api:
+
+```json
+{"id":1,"title":"Leather sofa #1","price_cents":25000,"photo_url":"https://example.com/photos/ad-1.jpg","user_id":"00000000-0000-0000-0000-000000000002","created_at":"2024-06-01T02:00:00Z","username":"bob"}
+```
+
+The username is secondary to the ad, so it never makes the request fail. When it cannot be resolved, the ad is still returned with a `200` and the `username` field is **omitted**:
+- the `users` api is down, slow or failing: logged at `ERROR`;
+- the owner does not exist in the `users` api (an orphan ad): logged at `WARN`.
+
+The call to the `users` api is configured with:
+
+| Variable           | Default                 | Description                                   |
+|--------------------|-------------------------|-----------------------------------------------|
+| `IDENTITY_URL`     | `http://localhost:8081` | Base URL of the `users` api                   |
+| `IDENTITY_TIMEOUT` | `2s`                    | Maximum duration of a call to the `users` api |
 
 ## Authentication
 
