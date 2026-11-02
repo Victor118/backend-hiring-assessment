@@ -7,8 +7,10 @@ import (
 
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao/postgres"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/http"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/identity/userapi"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/common/httpserver"
+	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/users/pkg/api"
 )
 
 func main() {
@@ -19,6 +21,9 @@ func main() {
 }
 
 func run() error {
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
 	ctx := context.Background()
 	cfg := Load()
 
@@ -32,9 +37,12 @@ func run() error {
 		}
 	}()
 
+	usersClient := api.NewClient(cfg.IdentityURL, cfg.IdentityTimeout)
+	identities := userapi.New(usersClient)
+
 	router := http.NewRouter(http.Usecases{
 		CreateAd: usecase.NewCreateAdFunc(adDAO),
-		GetAd:    usecase.NewGetAdByIDFunc(adDAO),
+		GetAd:    usecase.NewGetAdByIDFunc(adDAO, identities, logger),
 		ListAds:  usecase.NewListAdsFunc(adDAO),
 		DeleteAd: usecase.NewDeleteAdFunc(adDAO),
 	})

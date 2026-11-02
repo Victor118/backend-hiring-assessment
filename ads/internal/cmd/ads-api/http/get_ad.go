@@ -17,16 +17,18 @@ type getAdResponse struct {
 	PhotoURL   string    `json:"photo_url"`
 	UserID     string    `json:"user_id"`
 	CreatedAt  time.Time `json:"created_at"`
+	Username   string    `json:"username,omitempty"`
 }
 
-func adToGetAdResponse(a domain.Ad) getAdResponse {
+func adToGetAdResponse(a domain.AdDetails) getAdResponse {
 	return getAdResponse{
-		ID:         int64(a.ID),
-		Title:      a.Title,
-		PriceCents: a.Price,
-		PhotoURL:   a.PhotoURL,
-		UserID:     a.UserID.String(),
-		CreatedAt:  a.CreatedAt.UTC(),
+		ID:         int64(a.Ad.ID),
+		Title:      a.Ad.Title,
+		PriceCents: a.Ad.Price,
+		PhotoURL:   a.Ad.PhotoURL,
+		UserID:     a.Ad.UserID.String(),
+		CreatedAt:  a.Ad.CreatedAt.UTC(),
+		Username:   a.Username,
 	}
 }
 
