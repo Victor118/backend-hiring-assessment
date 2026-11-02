@@ -75,12 +75,18 @@ The username is secondary to the ad, so it never makes the request fail. When it
 - the `users` api is down, slow or failing: logged at `ERROR`;
 - the owner does not exist in the `users` api (an orphan ad): logged at `WARN`.
 
+Usernames are cached in memory, in each instance of the `ads` api, so that this heavily read endpoint does not call the `users` api on every request. Only successful lookups are cached: a failure is retried on the next request. A renamed user may keep their former username for up to `IDENTITY_CACHE_TTL`.
+
 The call to the `users` api is configured with:
 
-| Variable           | Default                 | Description                                   |
-|--------------------|-------------------------|-----------------------------------------------|
-| `IDENTITY_URL`     | `http://localhost:8081` | Base URL of the `users` api                   |
-| `IDENTITY_TIMEOUT` | `2s`                    | Maximum duration of a call to the `users` api |
+| Variable              | Default                 | Description                                         |
+|-----------------------|-------------------------|-----------------------------------------------------|
+| `IDENTITY_URL`        | `http://localhost:8081` | Base URL of the `users` api                         |
+| `IDENTITY_TIMEOUT`    | `2s`                    | Maximum duration of a call to the `users` api       |
+| `IDENTITY_CACHE_SIZE` | `10000`                 | Maximum number of usernames kept in memory          |
+| `IDENTITY_CACHE_TTL`  | `5m`                    | How long a username is kept before being refreshed  |
+
+Invalid or non-positive values fall back to the default.
 
 ## Authentication
 
