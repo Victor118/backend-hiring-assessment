@@ -42,6 +42,16 @@ func NewImportAdsFunc(adRepository ports.TransactionalAdRepository) ImportAdsFun
 }
 
 func (uc importAds) importAds(ctx context.Context, req ImportAdsRequest) ([]domain.AdID, error) {
+	drafts := make([]domain.AdDraft, 0, len(req.Ads))
+	// Every ad is checked before the transaction opens: an invalid import is rejected as a whole, without touching the database.
+	for i, ad := range req.Ads {
+		d, err := domain.NewAdDraft(ad.Title, ad.PriceCents, ad.PhotoURL, req.OwnerID)
+		if err != nil {
+			return nil, fmt.Errorf("unable to import ad %d: %w", i, err)
+		}
+		drafts = append(drafts, d)
+	}
+
 	tx, err := uc.adRepository.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to import ads: %w", err)
@@ -50,14 +60,7 @@ func (uc importAds) importAds(ctx context.Context, req ImportAdsRequest) ([]doma
 	defer func() { _ = tx.Rollback() }()
 
 	results := make([]domain.AdID, 0, len(req.Ads))
-	for i, importedAd := range req.Ads {
-		draft := domain.AdDraft{
-			Title:      importedAd.Title,
-			PhotoURL:   importedAd.PhotoURL,
-			PriceCents: importedAd.PriceCents,
-			OwnerID:    req.OwnerID,
-		}
-
+	for i, draft := range drafts {
 		id, err := tx.CreateAd(ctx, draft)
 		if err != nil {
 			return nil, fmt.Errorf("unable to import ad %d: %w", i, err)

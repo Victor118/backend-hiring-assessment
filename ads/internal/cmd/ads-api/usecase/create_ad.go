@@ -31,12 +31,11 @@ func NewCreateAdFunc(adRepository ports.AdRepository) CreateAdFunc {
 }
 
 func (uc createAd) createAd(ctx context.Context, req CreateAdRequest) (domain.AdID, error) {
-	adID, err := uc.adRepository.CreateAd(ctx, domain.AdDraft{
-		Title:      req.Title,
-		PriceCents: req.PriceCents,
-		PhotoURL:   req.PhotoURL,
-		OwnerID:    req.OwnerID,
-	})
+	draft, err := domain.NewAdDraft(req.Title, req.PriceCents, req.PhotoURL, req.OwnerID)
+	if err != nil {
+		return 0, fmt.Errorf("unable to create ad: %w", err)
+	}
+	adID, err := uc.adRepository.CreateAd(ctx, draft)
 	if err != nil {
 		return 0, fmt.Errorf("unable to create ad: %w", err)
 	}

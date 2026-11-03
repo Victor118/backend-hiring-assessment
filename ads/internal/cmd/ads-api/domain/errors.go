@@ -9,6 +9,8 @@ const (
 	ErrNotOwner sentinelError = "user is not owner"
 	// ErrUserNotFound is returned when the users service does not know a user.
 	ErrUserNotFound sentinelError = "user not found"
+	// ErrInvalidAd is returned when an ad breaks a business rule. The wrapping error names the faulty field.
+	ErrInvalidAd sentinelError = "invalid ad"
 )
 
 type sentinelError string
