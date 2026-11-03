@@ -69,7 +69,7 @@ func TestMock_GetAdByID(t *testing.T) {
 func TestMock_CreateAd(t *testing.T) {
 	t.Run("returns generated ID", func(t *testing.T) {
 		m := mock.New(t)
-		req := ports.NewAd{
+		req := domain.AdDraft{
 			Title:      "bike",
 			PriceCents: 5000,
 			PhotoURL:   "https://example.com/bike.jpg",
@@ -86,7 +86,7 @@ func TestMock_CreateAd(t *testing.T) {
 
 	t.Run("returns ErrUnknownOwner when owner does not exist", func(t *testing.T) {
 		m := mock.New(t)
-		req := ports.NewAd{
+		req := domain.AdDraft{
 			Title:      "bike",
 			PriceCents: 5000,
 			PhotoURL:   "https://example.com/bike.jpg",

@@ -9,7 +9,7 @@ import (
 // AdRepository persists and retrieves ads.
 type AdRepository interface {
 	// CreateAd inserts an ad and returns its generated identifier. It returns domain.ErrUnknownOwner when the owner does not exist.
-	CreateAd(ctx context.Context, ad NewAd) (domain.AdID, error)
+	CreateAd(ctx context.Context, ad domain.AdDraft) (domain.AdID, error)
 	// GetAdByID returns a single ad. It returns domain.ErrAdNotFound when no ad matches.
 	GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error)
 	// SearchAds returns all ads matching the filter.
@@ -40,12 +40,4 @@ type AdFilter struct {
 	MinPriceCents int64
 	MaxPriceCents int64
 	Title         string
-}
-
-// NewAd carries the data needed to create an ad.
-type NewAd struct {
-	Title      string
-	PriceCents int64
-	PhotoURL   string
-	OwnerID    domain.UserID
 }

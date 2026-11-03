@@ -51,14 +51,14 @@ func (uc importAds) importAds(ctx context.Context, req ImportAdsRequest) ([]doma
 
 	results := make([]domain.AdID, 0, len(req.Ads))
 	for i, importedAd := range req.Ads {
-		newAd := ports.NewAd{
+		draft := domain.AdDraft{
 			Title:      importedAd.Title,
 			PhotoURL:   importedAd.PhotoURL,
 			PriceCents: importedAd.PriceCents,
 			OwnerID:    req.OwnerID,
 		}
 
-		id, err := tx.CreateAd(ctx, newAd)
+		id, err := tx.CreateAd(ctx, draft)
 		if err != nil {
 			return nil, fmt.Errorf("unable to import ad %d: %w", i, err)
 		}

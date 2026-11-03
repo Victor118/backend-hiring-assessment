@@ -49,7 +49,7 @@ func (m *Mock) GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error)
 }
 
 // CreateAd returns the ad and the error set on the mock.
-func (m *Mock) CreateAd(ctx context.Context, ad ports.NewAd) (domain.AdID, error) {
+func (m *Mock) CreateAd(ctx context.Context, ad domain.AdDraft) (domain.AdID, error) {
 	args := m.Called(ctx, ad)
 
 	adID, _ := args.Get(0).(domain.AdID)

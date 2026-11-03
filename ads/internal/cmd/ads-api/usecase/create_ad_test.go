@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao/mock"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
-	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 )
 
@@ -22,7 +21,7 @@ func TestCreateAd(t *testing.T) {
 		PhotoURL:   "https://example.com/bike.jpg",
 		OwnerID:    "user-1",
 	}
-	newAd := ports.NewAd{
+	draft := domain.AdDraft{
 		Title:      "mountain bike",
 		PriceCents: 15000,
 		PhotoURL:   "https://example.com/bike.jpg",
@@ -31,7 +30,7 @@ func TestCreateAd(t *testing.T) {
 
 	t.Run("nominal", func(t *testing.T) {
 		m := mock.New(t)
-		m.On("CreateAd", ctx, newAd).Return(domain.AdID(7), nil)
+		m.On("CreateAd", ctx, draft).Return(domain.AdID(7), nil)
 
 		got, err := usecase.NewCreateAdFunc(m)(ctx, ucReq)
 
@@ -42,7 +41,7 @@ func TestCreateAd(t *testing.T) {
 	t.Run("error from dao", func(t *testing.T) {
 		m := mock.New(t)
 		dbErr := errors.New("connection reset")
-		m.On("CreateAd", ctx, newAd).Return(domain.AdID(0), dbErr)
+		m.On("CreateAd", ctx, draft).Return(domain.AdID(0), dbErr)
 
 		_, err := usecase.NewCreateAdFunc(m)(ctx, ucReq)
 

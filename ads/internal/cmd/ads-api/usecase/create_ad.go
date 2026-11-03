@@ -31,7 +31,7 @@ func NewCreateAdFunc(adRepository ports.AdRepository) CreateAdFunc {
 }
 
 func (uc createAd) createAd(ctx context.Context, req CreateAdRequest) (domain.AdID, error) {
-	adID, err := uc.adRepository.CreateAd(ctx, ports.NewAd{
+	adID, err := uc.adRepository.CreateAd(ctx, domain.AdDraft{
 		Title:      req.Title,
 		PriceCents: req.PriceCents,
 		PhotoURL:   req.PhotoURL,

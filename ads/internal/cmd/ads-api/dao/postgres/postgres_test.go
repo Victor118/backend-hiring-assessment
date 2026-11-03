@@ -160,7 +160,7 @@ func TestDeleteAd(t *testing.T) {
 
 func TestCreateAd(t *testing.T) {
 	ctx := context.Background()
-	req := ports.NewAd{
+	req := domain.AdDraft{
 		Title:      "mountain bike",
 		PriceCents: 15000,
 		PhotoURL:   "https://example.com/bike.jpg",
@@ -212,7 +212,7 @@ func TestCreateAd(t *testing.T) {
 
 func TestTransaction(t *testing.T) {
 	ctx := context.Background()
-	req := ports.NewAd{
+	req := domain.AdDraft{
 		Title:      "mountain bike",
 		PriceCents: 15000,
 		PhotoURL:   "https://example.com/bike.jpg",

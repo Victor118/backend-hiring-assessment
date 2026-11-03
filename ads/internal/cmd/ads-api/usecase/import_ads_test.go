@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	mockdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao/mock"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
-	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 )
 
@@ -30,9 +29,9 @@ func TestImportAds(t *testing.T) {
 		dao := mockdao.New(t)
 		tx := mockdao.New(t)
 		dao.On("Begin", ctx).Return(tx, nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Mountain bike", PriceCents: 12000, PhotoURL: "https://example.com/photos/bike.jpg", OwnerID: "user-1"}).Return(domain.AdID(10), nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Leather sofa", PriceCents: 25000, PhotoURL: "https://example.com/photos/sofa.jpg", OwnerID: "user-1"}).Return(domain.AdID(11), nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Vintage camera", PriceCents: 8550, PhotoURL: "https://example.com/photos/camera.jpg", OwnerID: "user-1"}).Return(domain.AdID(12), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Mountain bike", PriceCents: 12000, PhotoURL: "https://example.com/photos/bike.jpg", OwnerID: "user-1"}).Return(domain.AdID(10), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Leather sofa", PriceCents: 25000, PhotoURL: "https://example.com/photos/sofa.jpg", OwnerID: "user-1"}).Return(domain.AdID(11), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Vintage camera", PriceCents: 8550, PhotoURL: "https://example.com/photos/camera.jpg", OwnerID: "user-1"}).Return(domain.AdID(12), nil).Once()
 		tx.On("Commit").Return(nil).Once()
 		// The deferred Rollback runs even after a successful Commit, where it does nothing.
 		tx.On("Rollback").Return(nil).Maybe()
@@ -59,8 +58,8 @@ func TestImportAds(t *testing.T) {
 		tx := mockdao.New(t)
 		dao.On("Begin", ctx).Return(tx, nil).Once()
 		dbErr := errors.New("boom")
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Mountain bike", PriceCents: 12000, PhotoURL: "https://example.com/photos/bike.jpg", OwnerID: "user-1"}).Return(domain.AdID(10), nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Leather sofa", PriceCents: 25000, PhotoURL: "https://example.com/photos/sofa.jpg", OwnerID: "user-1"}).Return(domain.AdID(0), dbErr).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Mountain bike", PriceCents: 12000, PhotoURL: "https://example.com/photos/bike.jpg", OwnerID: "user-1"}).Return(domain.AdID(10), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Leather sofa", PriceCents: 25000, PhotoURL: "https://example.com/photos/sofa.jpg", OwnerID: "user-1"}).Return(domain.AdID(0), dbErr).Once()
 		tx.On("Rollback").Return(nil).Once()
 
 		adIDs, err := usecase.NewImportAdsFunc(dao)(ctx, importAdsRequest)
@@ -74,9 +73,9 @@ func TestImportAds(t *testing.T) {
 		dao := mockdao.New(t)
 		tx := mockdao.New(t)
 		dao.On("Begin", ctx).Return(tx, nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Mountain bike", PriceCents: 12000, PhotoURL: "https://example.com/photos/bike.jpg", OwnerID: "user-1"}).Return(domain.AdID(10), nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Leather sofa", PriceCents: 25000, PhotoURL: "https://example.com/photos/sofa.jpg", OwnerID: "user-1"}).Return(domain.AdID(11), nil).Once()
-		tx.On("CreateAd", ctx, ports.NewAd{Title: "Vintage camera", PriceCents: 8550, PhotoURL: "https://example.com/photos/camera.jpg", OwnerID: "user-1"}).Return(domain.AdID(12), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Mountain bike", PriceCents: 12000, PhotoURL: "https://example.com/photos/bike.jpg", OwnerID: "user-1"}).Return(domain.AdID(10), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Leather sofa", PriceCents: 25000, PhotoURL: "https://example.com/photos/sofa.jpg", OwnerID: "user-1"}).Return(domain.AdID(11), nil).Once()
+		tx.On("CreateAd", ctx, domain.AdDraft{Title: "Vintage camera", PriceCents: 8550, PhotoURL: "https://example.com/photos/camera.jpg", OwnerID: "user-1"}).Return(domain.AdID(12), nil).Once()
 		dbErr := errors.New("boom")
 		tx.On("Commit").Return(dbErr).Once()
 		// A failed Commit already ends the transaction: rolling it back afterwards is allowed but not required.

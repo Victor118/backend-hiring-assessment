@@ -163,7 +163,7 @@ func (d *DAO) GetAdByID(ctx context.Context, id domain.AdID) (domain.Ad, error) 
 }
 
 // CreateAd inserts an ad and returns its generated identifier.
-func (d *DAO) CreateAd(ctx context.Context, ad ports.NewAd) (domain.AdID, error) {
+func (d *DAO) CreateAd(ctx context.Context, ad domain.AdDraft) (domain.AdID, error) {
 	const query = `
 		INSERT INTO ads (title, price_cents, photo_url, user_id)
 		VALUES ($1, $2, $3, $4::uuid)
