@@ -42,10 +42,11 @@ func run() error {
 	identities := cache.New(userapi.New(usersClient), cfg.IdentityCacheSize, cfg.IdentityCacheTTL)
 
 	router := http.NewRouter(http.Usecases{
-		CreateAd: usecase.NewCreateAdFunc(adDAO),
-		GetAd:    usecase.NewGetAdByIDFunc(adDAO, identities, logger),
-		ListAds:  usecase.NewListAdsFunc(adDAO),
-		DeleteAd: usecase.NewDeleteAdFunc(adDAO),
+		CreateAd:  usecase.NewCreateAdFunc(adDAO),
+		GetAd:     usecase.NewGetAdByIDFunc(adDAO, identities, logger),
+		ListAds:   usecase.NewListAdsFunc(adDAO),
+		DeleteAd:  usecase.NewDeleteAdFunc(adDAO),
+		ImportAds: usecase.NewImportAdsFunc(adDAO),
 	})
 
 	return httpserver.Run(ctx, cfg.HTTPAddr, router)
