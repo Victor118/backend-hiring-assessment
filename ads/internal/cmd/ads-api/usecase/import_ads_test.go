@@ -217,4 +217,27 @@ func TestImportAds(t *testing.T) {
 		require.ErrorIs(t, err, domain.ErrInvalidAd)
 		assert.Nil(t, adIDs)
 	})
+
+	t.Run("rejects an empty import without opening a transaction", func(t *testing.T) {
+		// nil is what the handler passes when the body has no ads field at all.
+		for name, ads := range map[string][]usecase.ImportedAd{
+			"no ads": nil,
+			"empty":  {},
+		} {
+			t.Run(name, func(t *testing.T) {
+				emptyImport := usecase.ImportAdsRequest{
+					OwnerID:        "user-1",
+					IdempotencyKey: importKey,
+					Ads:            ads,
+				}
+				// No expectation: neither Begin nor CreateAd must be called.
+				dao := mockdao.New(t)
+
+				adIDs, err := usecase.NewImportAdsFunc(dao)(ctx, emptyImport)
+
+				require.ErrorIs(t, err, domain.ErrInvalidAd)
+				assert.Nil(t, adIDs)
+			})
+		}
+	})
 }

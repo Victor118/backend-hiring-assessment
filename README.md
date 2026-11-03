@@ -103,7 +103,7 @@ Invalid or non-positive values fall back to the default.
 
 ### Bulk import
 
-`POST /ads/import` creates every ad of the batch or none of them: they are inserted in a single transaction, and one invalid ad rejects the whole batch.
+`POST /ads/import` creates every ad of the batch or none of them: they are inserted in a single transaction, and one invalid ad rejects the whole batch. An empty batch is rejected with a `400`.
 
 It answers with the IDs of the created ads, in the order of the batch:
 

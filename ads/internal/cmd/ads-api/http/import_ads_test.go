@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -99,23 +98,6 @@ func TestHandlerImportAds(t *testing.T) {
 			{Title: "scooter", PriceCents: 8000, PhotoURL: "https://example.com/scooter.jpg"},
 			{Title: "car", PriceCents: 200000, PhotoURL: "https://example.com/car.jpg"},
 		}, received.Ads)
-	})
-
-	t.Run("returns 201 with an empty list of IDs when body has no ads", func(t *testing.T) {
-		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
-			return []domain.AdID{}, nil
-		})
-		defer srv.Close()
-
-		resp := postImport(t, srv.URL+"/ads/import", importAdsBody{Ads: []createAdBody{}}, "user-1", importKey)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusCreated, resp.StatusCode)
-
-		raw, err := io.ReadAll(resp.Body)
-		require.NoError(t, err)
-		// An empty array, not null: clients iterate over the IDs without checking for null.
-		assert.JSONEq(t, `{"ids":[]}`, string(raw))
 	})
 
 	t.Run("returns 401 when Authorization header is missing", func(t *testing.T) {

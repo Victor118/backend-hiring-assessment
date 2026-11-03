@@ -42,6 +42,11 @@ func NewImportAdsFunc(adRepository ports.TransactionalAdRepository) ImportAdsFun
 }
 
 func (uc importAds) importAds(ctx context.Context, req ImportAdsRequest) ([]domain.AdID, error) {
+	// len covers both an empty ads array and a body without any ads field, which decodes into a nil slice.
+	if len(req.Ads) == 0 {
+		return nil, fmt.Errorf("%w: the import has no ads", domain.ErrInvalidAd)
+	}
+
 	drafts := make([]domain.AdDraft, 0, len(req.Ads))
 	// Every ad is checked before the transaction opens: an invalid import is rejected as a whole, without touching the database.
 	for i, ad := range req.Ads {
