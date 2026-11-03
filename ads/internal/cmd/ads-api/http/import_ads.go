@@ -5,6 +5,8 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/google/uuid"
+
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/usecase"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/common/middleware"
@@ -18,8 +20,18 @@ type importAdsResponse struct {
 	IDs []int64 `json:"ids"`
 }
 
+// handlerImportAds serves POST /ads/import. The Idempotency-Key header, a UUID, is required: retrying an import with
+// the same key answers with the IDs of the ads it created instead of creating them twice.
 func handlerImportAds(importAds usecase.ImportAdsFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
+		// Parsed rather than passed through: an invalid key is a client error, and the canonical form makes the same
+		// key in upper case the same key.
+		key, err := uuid.Parse(r.Header.Get("Idempotency-Key"))
+		if err != nil {
+			rw.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
 		var body importAdsBody
 		if err := decodeBody(r, &body); err != nil {
 			rw.WriteHeader(http.StatusBadRequest)
@@ -40,16 +52,19 @@ func handlerImportAds(importAds usecase.ImportAdsFunc) http.HandlerFunc {
 		importAdsReq := usecase.ImportAdsRequest{
 			OwnerID:        ownerID,
 			Ads:            ads,
-			IdempotencyKey: "",
+			IdempotencyKey: key.String(),
 		}
 		ids, err := importAds(r.Context(), importAdsReq)
 		if err != nil {
-			if errors.Is(err, domain.ErrInvalidAd) {
+			switch {
+			case errors.Is(err, domain.ErrInvalidAd):
 				rw.WriteHeader(http.StatusBadRequest)
-				return
+			case errors.Is(err, domain.ErrImportKeyReused):
+				rw.WriteHeader(http.StatusUnprocessableEntity)
+			default:
+				rw.WriteHeader(http.StatusInternalServerError)
 			}
 
-			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 

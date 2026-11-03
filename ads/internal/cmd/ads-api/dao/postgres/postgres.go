@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
@@ -84,6 +85,87 @@ func (d *DAO) Begin(ctx context.Context) (ports.AdTx, error) {
 	}
 
 	return &DAO{db: d.db, tx: tx}, nil
+}
+
+// ReserveImport claims the import key for the owner within the transaction. The primary key of import_requests is
+// what serializes concurrent imports: a second transaction inserting the same key waits until the first one ends,
+// then either finds the committed import or, if it was rolled back, reserves the key itself.
+func (d *DAO) ReserveImport(ctx context.Context, ownerID domain.UserID, key string, requestHash []byte) (domain.ImportRecord, bool, error) {
+	if d.tx == nil {
+		return domain.ImportRecord{}, false, errors.New("unable to reserve the import outside a transaction")
+	}
+
+	const reserve = `
+		INSERT INTO import_requests (user_id, idempotency_key, request_hash)
+		VALUES ($1::uuid, $2::uuid, $3)
+		ON CONFLICT (user_id, idempotency_key) DO NOTHING`
+
+	result, err := d.tx.ExecContext(ctx, reserve, string(ownerID), key, requestHash)
+	if err != nil {
+		return domain.ImportRecord{}, false, fmt.Errorf("unable to reserve the import: %w", err)
+	}
+
+	reserved, err := result.RowsAffected()
+	if err != nil {
+		return domain.ImportRecord{}, false, fmt.Errorf("unable to reserve the import: %w", err)
+	}
+
+	if reserved == 1 {
+		return domain.ImportRecord{}, false, nil
+	}
+
+	const stored = `
+		SELECT request_hash, ad_ids FROM import_requests
+		WHERE user_id = $1::uuid AND idempotency_key = $2::uuid`
+
+	var (
+		previous domain.ImportRecord
+		adIDs    []int64
+	)
+	// database/sql cannot scan a PostgreSQL array: the pgtype scanner decodes the text format pgx hands over.
+	err = d.tx.QueryRowContext(ctx, stored, string(ownerID), key).Scan(&previous.RequestHash, pgtype.NewMap().SQLScanner(&adIDs))
+	if err != nil {
+		return domain.ImportRecord{}, false, fmt.Errorf("unable to read the stored import: %w", err)
+	}
+
+	previous.AdIDs = make([]domain.AdID, 0, len(adIDs))
+	for _, adID := range adIDs {
+		previous.AdIDs = append(previous.AdIDs, domain.AdID(adID))
+	}
+
+	return previous, true, nil
+}
+
+// CompleteImport stores the identifiers of the ads created under an import key reserved within the transaction.
+func (d *DAO) CompleteImport(ctx context.Context, ownerID domain.UserID, key string, adIDs []domain.AdID) error {
+	if d.tx == nil {
+		return errors.New("unable to complete the import outside a transaction")
+	}
+
+	const query = `
+		UPDATE import_requests SET ad_ids = $3
+		WHERE user_id = $1::uuid AND idempotency_key = $2::uuid`
+
+	ids := make([]int64, 0, len(adIDs))
+	for _, adID := range adIDs {
+		ids = append(ids, int64(adID))
+	}
+
+	result, err := d.tx.ExecContext(ctx, query, string(ownerID), key, ids)
+	if err != nil {
+		return fmt.Errorf("unable to complete the import: %w", err)
+	}
+
+	updated, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("unable to complete the import: %w", err)
+	}
+
+	if updated != 1 {
+		return fmt.Errorf("unable to complete the import: key %s is not reserved", key)
+	}
+
+	return nil
 }
 
 // Commit applies every change made through the transaction.

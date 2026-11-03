@@ -127,6 +127,57 @@ func TestMock_Begin(t *testing.T) {
 	})
 }
 
+func TestMock_ReserveImport(t *testing.T) {
+	hash := []byte("fingerprint")
+
+	t.Run("returns configured stored import", func(t *testing.T) {
+		m := mock.New(t)
+		stored := domain.ImportRecord{RequestHash: hash, AdIDs: []domain.AdID{10, 11}}
+
+		m.On("ReserveImport", ctx, domain.UserID("user-1"), "key-1", hash).Return(stored, true, nil)
+
+		previous, found, err := m.ReserveImport(ctx, "user-1", "key-1", hash)
+
+		require.NoError(t, err)
+		assert.True(t, found)
+		assert.Equal(t, stored, previous)
+	})
+
+	t.Run("returns configured error", func(t *testing.T) {
+		m := mock.New(t)
+		boom := errors.New("db down")
+
+		m.On("ReserveImport", ctx, domain.UserID("user-1"), "key-1", hash).Return(nil, false, boom)
+
+		previous, found, err := m.ReserveImport(ctx, "user-1", "key-1", hash)
+
+		assert.ErrorIs(t, err, boom)
+		assert.False(t, found)
+		assert.Zero(t, previous)
+	})
+}
+
+func TestMock_CompleteImport(t *testing.T) {
+	adIDs := []domain.AdID{10, 11}
+
+	t.Run("returns nil on success", func(t *testing.T) {
+		m := mock.New(t)
+
+		m.On("CompleteImport", ctx, domain.UserID("user-1"), "key-1", adIDs).Return(nil)
+
+		require.NoError(t, m.CompleteImport(ctx, "user-1", "key-1", adIDs))
+	})
+
+	t.Run("returns configured error", func(t *testing.T) {
+		m := mock.New(t)
+		boom := errors.New("db down")
+
+		m.On("CompleteImport", ctx, domain.UserID("user-1"), "key-1", adIDs).Return(boom)
+
+		assert.ErrorIs(t, m.CompleteImport(ctx, "user-1", "key-1", adIDs), boom)
+	})
+}
+
 func TestMock_Commit(t *testing.T) {
 	t.Run("returns nil on success", func(t *testing.T) {
 		m := mock.New(t)

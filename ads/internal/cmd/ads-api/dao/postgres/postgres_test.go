@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"database/sql/driver"
 	"errors"
 	"testing"
 	"time"
@@ -16,9 +17,21 @@ import (
 
 var adCols = []string{"id", "title", "price_cents", "photo_url", "user_id", "created_at"}
 
+// arrayConverter lets []int64 arguments through, as pgx does: it encodes them as PostgreSQL arrays, whereas the default
+// converter of sqlmock rejects them.
+type arrayConverter struct{}
+
+func (arrayConverter) ConvertValue(v any) (driver.Value, error) {
+	if ids, ok := v.([]int64); ok {
+		return ids, nil
+	}
+
+	return driver.DefaultParameterConverter.ConvertValue(v)
+}
+
 func newMockDAO(t *testing.T) (*DAO, sqlmock.Sqlmock) {
 	t.Helper()
-	db, mock, err := sqlmock.New()
+	db, mock, err := sqlmock.New(sqlmock.ValueConverterOption(arrayConverter{}))
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = db.Close() })
 	return &DAO{db: db}, mock
@@ -308,5 +321,152 @@ func TestTransaction(t *testing.T) {
 
 		require.Error(t, dao.Commit())
 		require.Error(t, dao.Rollback())
+	})
+}
+
+// newMockTx returns a DAO scoped to an opened transaction, for the methods that only make sense within one.
+func newMockTx(t *testing.T) (*DAO, sqlmock.Sqlmock) {
+	t.Helper()
+	dao, mock := newMockDAO(t)
+	mock.ExpectBegin()
+
+	tx, err := dao.Begin(context.Background())
+	require.NoError(t, err)
+
+	return tx.(*DAO), mock
+}
+
+func TestReserveImport(t *testing.T) {
+	ctx := context.Background()
+	const (
+		owner = domain.UserID("00000000-0000-0000-0000-000000000001")
+		key   = "6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d"
+	)
+	hash := []byte("fingerprint")
+
+	t.Run("reserves a key that was never used", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectExec("INSERT INTO import_requests").
+			WithArgs(string(owner), key, hash).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		previous, found, err := tx.ReserveImport(ctx, owner, key, hash)
+
+		require.NoError(t, err)
+		assert.False(t, found)
+		assert.Zero(t, previous)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns the stored import when the key was already used", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectExec("INSERT INTO import_requests").
+			WithArgs(string(owner), key, hash).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+		// pgx hands arrays over to database/sql in their text format.
+		mock.ExpectQuery("SELECT request_hash, ad_ids FROM import_requests").
+			WithArgs(string(owner), key).
+			WillReturnRows(sqlmock.NewRows([]string{"request_hash", "ad_ids"}).AddRow([]byte("stored"), "{10,11,12}"))
+
+		previous, found, err := tx.ReserveImport(ctx, owner, key, hash)
+
+		require.NoError(t, err)
+		assert.True(t, found)
+		assert.Equal(t, domain.ImportRecord{RequestHash: []byte("stored"), AdIDs: []domain.AdID{10, 11, 12}}, previous)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error when the key cannot be reserved", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		boom := errors.New("db down")
+		mock.ExpectExec("INSERT INTO import_requests").
+			WithArgs(string(owner), key, hash).
+			WillReturnError(boom)
+
+		_, found, err := tx.ReserveImport(ctx, owner, key, hash)
+
+		require.ErrorIs(t, err, boom)
+		assert.False(t, found)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error when the stored import cannot be read", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		boom := errors.New("db down")
+		mock.ExpectExec("INSERT INTO import_requests").
+			WithArgs(string(owner), key, hash).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+		mock.ExpectQuery("SELECT request_hash, ad_ids FROM import_requests").
+			WithArgs(string(owner), key).
+			WillReturnError(boom)
+
+		_, found, err := tx.ReserveImport(ctx, owner, key, hash)
+
+		require.ErrorIs(t, err, boom)
+		assert.False(t, found)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("refuses to reserve outside a transaction, where the key would not lock anything", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+
+		_, _, err := dao.ReserveImport(ctx, owner, key, hash)
+
+		require.Error(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestCompleteImport(t *testing.T) {
+	ctx := context.Background()
+	const (
+		owner = domain.UserID("00000000-0000-0000-0000-000000000001")
+		key   = "6f1c2b8e-3d4a-4f5b-9c6d-7e8f9a0b1c2d"
+	)
+
+	t.Run("stores the IDs under the reserved key", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectExec("UPDATE import_requests SET ad_ids").
+			WithArgs(string(owner), key, []int64{10, 11, 12}).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		err := tx.CompleteImport(ctx, owner, key, []domain.AdID{10, 11, 12})
+
+		require.NoError(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error when the key was not reserved", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectExec("UPDATE import_requests SET ad_ids").
+			WithArgs(string(owner), key, []int64{10}).
+			WillReturnResult(sqlmock.NewResult(0, 0))
+
+		err := tx.CompleteImport(ctx, owner, key, []domain.AdID{10})
+
+		require.Error(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error on failure", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		boom := errors.New("db down")
+		mock.ExpectExec("UPDATE import_requests SET ad_ids").
+			WithArgs(string(owner), key, []int64{10}).
+			WillReturnError(boom)
+
+		err := tx.CompleteImport(ctx, owner, key, []domain.AdID{10})
+
+		require.ErrorIs(t, err, boom)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("refuses to complete outside a transaction", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+
+		err := dao.CompleteImport(ctx, owner, key, []domain.AdID{10})
+
+		require.Error(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
 	})
 }

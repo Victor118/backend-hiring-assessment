@@ -52,12 +52,28 @@ func (uc importAds) importAds(ctx context.Context, req ImportAdsRequest) ([]doma
 		drafts = append(drafts, d)
 	}
 
+	adImport := domain.AdImport{
+		OwnerID: req.OwnerID,
+		Drafts:  drafts,
+		Key:     req.IdempotencyKey,
+	}
+	fingerprint := adImport.Fingerprint()
+
 	tx, err := uc.adRepository.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("unable to import ads: %w", err)
 	}
 	// Rolls back every ad created so far when the import stops early. It does nothing once the transaction is committed.
 	defer func() { _ = tx.Rollback() }()
+
+	// Reserving the key also locks it: a concurrent import with the same key waits until this transaction ends.
+	record, found, err := tx.ReserveImport(ctx, adImport.OwnerID, adImport.Key, fingerprint)
+	if err != nil {
+		return nil, fmt.Errorf("unable to import ads: %w", err)
+	}
+	if found {
+		return adImport.Replay(record)
+	}
 
 	results := make([]domain.AdID, 0, len(req.Ads))
 	for i, draft := range drafts {
@@ -67,6 +83,10 @@ func (uc importAds) importAds(ctx context.Context, req ImportAdsRequest) ([]doma
 		}
 
 		results = append(results, id)
+	}
+
+	if err := tx.CompleteImport(ctx, adImport.OwnerID, adImport.Key, results); err != nil {
+		return nil, fmt.Errorf("unable to complete the import: %w", err)
 	}
 
 	if err := tx.Commit(); err != nil {

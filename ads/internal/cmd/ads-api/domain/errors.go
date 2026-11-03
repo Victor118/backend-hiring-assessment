@@ -11,6 +11,8 @@ const (
 	ErrUserNotFound sentinelError = "user not found"
 	// ErrInvalidAd is returned when an ad breaks a business rule. The wrapping error names the faulty field.
 	ErrInvalidAd sentinelError = "invalid ad"
+	// ErrImportKeyReused is returned when an import key is sent again with another content: the key was reused, not retried.
+	ErrImportKeyReused sentinelError = "import key reused for another content"
 )
 
 type sentinelError string

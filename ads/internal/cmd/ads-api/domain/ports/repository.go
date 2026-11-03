@@ -28,6 +28,13 @@ type TransactionalAdRepository interface {
 // AdTx is an AdRepository scoped to an opened transaction: every call made on it is part of that transaction.
 type AdTx interface {
 	AdRepository
+	// ReserveImport claims the import key for the owner within the transaction, recording the fingerprint of the
+	// import. When the key was already used, it reserves nothing and returns the stored import with found set to true.
+	// A concurrent transaction reserving the same key waits until this one ends.
+	ReserveImport(ctx context.Context, ownerID domain.UserID, key string, requestHash []byte) (previous domain.ImportRecord, found bool, err error)
+	// CompleteImport stores, under an import key reserved within the transaction, the identifiers of the ads the import
+	// created, so that a retry can be answered with them.
+	CompleteImport(ctx context.Context, ownerID domain.UserID, key string, adIDs []domain.AdID) error
 	// Commit applies every change made through the transaction.
 	Commit() error
 	// Rollback discards every change made through the transaction. Calling it on an already committed transaction does nothing, so `defer func() { _ = tx.Rollback() }()` is a safe guard.

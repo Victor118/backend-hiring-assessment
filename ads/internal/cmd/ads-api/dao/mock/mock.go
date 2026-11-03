@@ -72,6 +72,20 @@ func (m *Mock) Begin(ctx context.Context) (ports.AdTx, error) {
 	return tx, args.Error(1)
 }
 
+// ReserveImport returns the stored import, whether it was found and the error set on the mock.
+func (m *Mock) ReserveImport(ctx context.Context, ownerID domain.UserID, key string, requestHash []byte) (domain.ImportRecord, bool, error) {
+	args := m.Called(ctx, ownerID, key, requestHash)
+
+	previous, _ := args.Get(0).(domain.ImportRecord)
+
+	return previous, args.Bool(1), args.Error(2)
+}
+
+// CompleteImport returns the error set on the mock.
+func (m *Mock) CompleteImport(ctx context.Context, ownerID domain.UserID, key string, adIDs []domain.AdID) error {
+	return m.Called(ctx, ownerID, key, adIDs).Error(0)
+}
+
 // Commit returns the error set on the mock.
 func (m *Mock) Commit() error {
 	return m.Called().Error(0)
