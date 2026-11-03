@@ -9,12 +9,16 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
 const adColumns = `id, title, price_cents, photo_url, user_id::text, created_at`
+
+var (
+	_ ports.TransactionalAdRepository = (*DAO)(nil)
+	_ ports.AdTx                      = (*DAO)(nil)
+)
 
 // DAO is a PostgreSQL-backed ad store.
 type DAO struct {
@@ -69,7 +73,7 @@ func (d *DAO) runner() queryRunner {
 }
 
 // Begin opens a transaction. Every call made on the returned Tx is part of it, and the caller must end it with Commit or Rollback.
-func (d *DAO) Begin(ctx context.Context) (adsdao.Tx, error) {
+func (d *DAO) Begin(ctx context.Context) (ports.AdTx, error) {
 	if d.tx != nil {
 		return nil, errors.New("unable to open a nested transaction")
 	}

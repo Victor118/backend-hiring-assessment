@@ -18,6 +18,22 @@ type AdRepository interface {
 	DeleteAd(ctx context.Context, id domain.AdID) error
 }
 
+// TransactionalAdRepository is an AdRepository that can open transactions. Every call made directly on it is its own transaction.
+type TransactionalAdRepository interface {
+	AdRepository
+	// Begin opens a transaction. Every call made on the returned AdTx is part of it, and the caller must end it with Commit or Rollback.
+	Begin(ctx context.Context) (AdTx, error)
+}
+
+// AdTx is an AdRepository scoped to an opened transaction: every call made on it is part of that transaction.
+type AdTx interface {
+	AdRepository
+	// Commit applies every change made through the transaction.
+	Commit() error
+	// Rollback discards every change made through the transaction. Calling it on an already committed transaction does nothing, so `defer func() { _ = tx.Rollback() }()` is a safe guard.
+	Rollback() error
+}
+
 // AdFilter describes an ad search. Zero values mean "no filter on this field".
 type AdFilter struct {
 	OwnerID       domain.UserID

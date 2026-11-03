@@ -5,12 +5,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/mock"
-	adsdao "github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/dao"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
-// Mock is a testify-based implementation of dao.DAO.
+var (
+	_ ports.TransactionalAdRepository = (*Mock)(nil)
+	_ ports.AdTx                      = (*Mock)(nil)
+)
+
+// Mock is a testify-based implementation of ports.TransactionalAdRepository.
 type Mock struct {
 	mock.Mock
 }
@@ -58,15 +62,14 @@ func (m *Mock) DeleteAd(ctx context.Context, id domain.AdID) error {
 	return m.Called(ctx, id).Error(0)
 }
 
-// Begin returns the mock itself as the transaction, so expectations stay set on a single object, and the error set on the mock.
-func (m *Mock) Begin(ctx context.Context) (adsdao.Tx, error) {
+// Begin returns the transaction and the error set on the mock, for example On("Begin", ctx).Return(tx, nil). Using another
+// Mock as the transaction keeps the calls made inside it apart from the calls made on the repository itself.
+func (m *Mock) Begin(ctx context.Context) (ports.AdTx, error) {
 	args := m.Called(ctx)
 
-	if err := args.Error(0); err != nil {
-		return nil, err
-	}
+	tx, _ := args.Get(0).(ports.AdTx)
 
-	return m, nil
+	return tx, args.Error(1)
 }
 
 // Commit returns the error set on the mock.

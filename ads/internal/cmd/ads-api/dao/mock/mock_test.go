@@ -102,22 +102,23 @@ func TestMock_CreateAd(t *testing.T) {
 }
 
 func TestMock_Begin(t *testing.T) {
-	t.Run("returns the mock itself as transaction", func(t *testing.T) {
+	t.Run("returns configured transaction", func(t *testing.T) {
 		m := mock.New(t)
+		configured := mock.New(t)
 
-		m.On("Begin", ctx).Return(nil)
+		m.On("Begin", ctx).Return(configured, nil)
 
 		tx, err := m.Begin(ctx)
 
 		require.NoError(t, err)
-		assert.Same(t, m, tx)
+		assert.Same(t, configured, tx)
 	})
 
 	t.Run("returns configured error", func(t *testing.T) {
 		m := mock.New(t)
 		boom := errors.New("db down")
 
-		m.On("Begin", ctx).Return(boom)
+		m.On("Begin", ctx).Return(nil, boom)
 
 		tx, err := m.Begin(ctx)
 
