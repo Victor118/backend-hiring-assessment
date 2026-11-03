@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -130,5 +131,17 @@ func TestHandlerImportAds(t *testing.T) {
 		defer resp.Body.Close()
 
 		assert.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	})
+
+	t.Run("returns 400 when an ad is invalid", func(t *testing.T) {
+		srv := newImportAdsServer(func(_ context.Context, _ usecase.ImportAdsRequest) ([]domain.AdID, error) {
+			return nil, fmt.Errorf("unable to import ad 2: %w", domain.ErrInvalidAd)
+		})
+		defer srv.Close()
+
+		resp := postJSON(t, srv.URL+"/ads/import", body, "user-1")
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 }

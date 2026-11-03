@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
@@ -43,6 +44,11 @@ func handlerImportAds(importAds usecase.ImportAdsFunc) http.HandlerFunc {
 		}
 		ids, err := importAds(r.Context(), importAdsReq)
 		if err != nil {
+			if errors.Is(err, domain.ErrInvalidAd) {
+				rw.WriteHeader(http.StatusBadRequest)
+				return
+			}
+
 			rw.WriteHeader(http.StatusInternalServerError)
 			return
 		}
