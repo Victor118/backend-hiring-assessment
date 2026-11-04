@@ -76,6 +76,23 @@ func TestImportAds(t *testing.T) {
 		assert.Nil(t, adIDs)
 	})
 
+	t.Run("rolls back and returns the error when the import key cannot be reserved", func(t *testing.T) {
+		dao := mockdao.New(t)
+		tx := mockdao.New(t)
+		dao.On("Begin", ctx).Return(tx, nil).Once()
+		dbErr := errors.New("boom")
+		tx.On("ReserveImport", ctx, adImport.OwnerID, adImport.Key, adImport.Fingerprint()).
+			Return(domain.ImportRecord{}, false, dbErr).Once()
+		// No CreateAd expectation: without the key, the import must not create any ad.
+		tx.On("Rollback").Return(nil).Once()
+
+		adIDs, err := usecase.NewImportAdsFunc(dao)(ctx, importAdsRequest)
+
+		tx.AssertNotCalled(t, "Commit")
+		require.ErrorIs(t, err, dbErr)
+		assert.Nil(t, adIDs)
+	})
+
 	t.Run("rolls back and returns the error when an ad cannot be created", func(t *testing.T) {
 		dao := mockdao.New(t)
 		tx := mockdao.New(t)
