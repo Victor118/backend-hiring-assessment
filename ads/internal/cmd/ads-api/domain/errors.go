@@ -13,6 +13,8 @@ const (
 	ErrInvalidAd sentinelError = "invalid ad"
 	// ErrImportKeyReused is returned when an import key is sent again with another content: the key was reused, not retried.
 	ErrImportKeyReused sentinelError = "import key reused for another content"
+	// ErrQuotaExceeded is returned when a publisher has already published as many ads as its quota allows.
+	ErrQuotaExceeded sentinelError = "publication quota exceeded"
 )
 
 type sentinelError string

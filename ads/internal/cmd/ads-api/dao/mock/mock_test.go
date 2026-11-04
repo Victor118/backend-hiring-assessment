@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -175,6 +176,67 @@ func TestMock_CompleteImport(t *testing.T) {
 		m.On("CompleteImport", ctx, domain.UserID("user-1"), "key-1", adIDs).Return(boom)
 
 		assert.ErrorIs(t, m.CompleteImport(ctx, "user-1", "key-1", adIDs), boom)
+	})
+}
+
+func TestMock_LockPublisher(t *testing.T) {
+	t.Run("returns nil on success", func(t *testing.T) {
+		m := mock.New(t)
+
+		m.On("LockPublisher", ctx, domain.UserID("user-1")).Return(nil)
+
+		require.NoError(t, m.LockPublisher(ctx, "user-1"))
+	})
+
+	t.Run("returns configured error", func(t *testing.T) {
+		m := mock.New(t)
+		boom := errors.New("db down")
+
+		m.On("LockPublisher", ctx, domain.UserID("user-1")).Return(boom)
+
+		assert.ErrorIs(t, m.LockPublisher(ctx, "user-1"), boom)
+	})
+}
+
+func TestMock_LoadPublisher(t *testing.T) {
+	t.Run("returns configured publisher", func(t *testing.T) {
+		m := mock.New(t)
+		want := domain.Publisher{ID: "user-1", RecentPublications: 3}
+
+		m.On("LoadPublisher", ctx, domain.UserID("user-1"), time.Hour).Return(want, nil)
+
+		got, err := m.LoadPublisher(ctx, "user-1", time.Hour)
+		require.NoError(t, err)
+		assert.Equal(t, want, got)
+	})
+
+	t.Run("returns configured error", func(t *testing.T) {
+		m := mock.New(t)
+		boom := errors.New("db down")
+
+		m.On("LoadPublisher", ctx, domain.UserID("user-1"), time.Hour).Return(domain.Publisher{}, boom)
+
+		_, err := m.LoadPublisher(ctx, "user-1", time.Hour)
+		assert.ErrorIs(t, err, boom)
+	})
+}
+
+func TestMock_RecordPublication(t *testing.T) {
+	t.Run("returns nil on success", func(t *testing.T) {
+		m := mock.New(t)
+
+		m.On("RecordPublication", ctx, domain.UserID("user-1")).Return(nil)
+
+		require.NoError(t, m.RecordPublication(ctx, "user-1"))
+	})
+
+	t.Run("returns configured error", func(t *testing.T) {
+		m := mock.New(t)
+		boom := errors.New("db down")
+
+		m.On("RecordPublication", ctx, domain.UserID("user-1")).Return(boom)
+
+		assert.ErrorIs(t, m.RecordPublication(ctx, "user-1"), boom)
 	})
 }
 

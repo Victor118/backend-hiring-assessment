@@ -470,3 +470,121 @@ func TestCompleteImport(t *testing.T) {
 		require.NoError(t, mock.ExpectationsWereMet())
 	})
 }
+
+func TestLockPublisher(t *testing.T) {
+	ctx := context.Background()
+	const owner = domain.UserID("00000000-0000-0000-0000-000000000001")
+
+	t.Run("takes an advisory lock on the owner", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectExec(`SELECT pg_advisory_xact_lock\(\$1, hashtext\(\$2\)\)`).
+			WithArgs(publisherLockNamespace, string(owner)).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		err := tx.LockPublisher(ctx, owner)
+
+		require.NoError(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error on failure", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		boom := errors.New("db down")
+		mock.ExpectExec("SELECT pg_advisory_xact_lock").
+			WithArgs(publisherLockNamespace, string(owner)).
+			WillReturnError(boom)
+
+		err := tx.LockPublisher(ctx, owner)
+
+		require.ErrorIs(t, err, boom)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("refuses to lock outside a transaction", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+
+		err := dao.LockPublisher(ctx, owner)
+
+		require.Error(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestLoadPublisher(t *testing.T) {
+	ctx := context.Background()
+	const owner = domain.UserID("00000000-0000-0000-0000-000000000001")
+
+	t.Run("counts the publications of the owner over the quota window", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectQuery("SELECT count\\(\\*\\) FROM ad_publications").
+			WithArgs(string(owner), float64(3600)).
+			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
+
+		publisher, err := tx.LoadPublisher(ctx, owner, time.Hour)
+
+		require.NoError(t, err)
+		assert.Equal(t, domain.Publisher{ID: owner, RecentPublications: 3}, publisher)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error on failure", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		boom := errors.New("db down")
+		mock.ExpectQuery("SELECT count").
+			WithArgs(string(owner), float64(3600)).
+			WillReturnError(boom)
+
+		_, err := tx.LoadPublisher(ctx, owner, time.Hour)
+
+		require.ErrorIs(t, err, boom)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("refuses to load outside a transaction", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+
+		_, err := dao.LoadPublisher(ctx, owner, time.Hour)
+
+		require.Error(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}
+
+func TestRecordPublication(t *testing.T) {
+	ctx := context.Background()
+	const owner = domain.UserID("00000000-0000-0000-0000-000000000001")
+
+	t.Run("records a publication of the owner", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		mock.ExpectExec("INSERT INTO ad_publications").
+			WithArgs(string(owner)).
+			WillReturnResult(sqlmock.NewResult(0, 1))
+
+		err := tx.RecordPublication(ctx, owner)
+
+		require.NoError(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error on failure", func(t *testing.T) {
+		tx, mock := newMockTx(t)
+		boom := errors.New("db down")
+		mock.ExpectExec("INSERT INTO ad_publications").
+			WithArgs(string(owner)).
+			WillReturnError(boom)
+
+		err := tx.RecordPublication(ctx, owner)
+
+		require.ErrorIs(t, err, boom)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("refuses to record outside a transaction", func(t *testing.T) {
+		dao, mock := newMockDAO(t)
+
+		err := dao.RecordPublication(ctx, owner)
+
+		require.Error(t, err)
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
+}

@@ -14,7 +14,11 @@ import (
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain/ports"
 )
 
-const adColumns = `id, title, price_cents, photo_url, user_id::text, created_at`
+const (
+	adColumns = `id, title, price_cents, photo_url, user_id::text, created_at`
+	// publisherLockNamespace is the first key of the advisory locks taken on publishers.
+	publisherLockNamespace = 1
+)
 
 var (
 	_ ports.TransactionalAdRepository = (*DAO)(nil)
@@ -163,6 +167,59 @@ func (d *DAO) CompleteImport(ctx context.Context, ownerID domain.UserID, key str
 
 	if updated != 1 {
 		return fmt.Errorf("unable to complete the import: key %s is not reserved", key)
+	}
+
+	return nil
+}
+
+// LockPublisher takes a transaction-level advisory lock on the owner: a concurrent transaction locking the same owner
+// waits until this one ends, while the other owners are not blocked. Two owners whose IDs share a hash only wait on
+// each other, which is harmless.
+func (d *DAO) LockPublisher(ctx context.Context, ownerID domain.UserID) error {
+	if d.tx == nil {
+		return errors.New("unable to lock the publisher outside a transaction")
+	}
+
+	// The first key scopes the lock to publishers, so that it never collides with another use of advisory locks.
+	const query = `SELECT pg_advisory_xact_lock($1, hashtext($2))`
+
+	if _, err := d.tx.ExecContext(ctx, query, publisherLockNamespace, string(ownerID)); err != nil {
+		return fmt.Errorf("unable to lock the publisher: %w", err)
+	}
+
+	return nil
+}
+
+// LoadPublisher counts the publications of the owner over the last window, on the database clock RecordPublication
+// dates them with.
+func (d *DAO) LoadPublisher(ctx context.Context, ownerID domain.UserID, window time.Duration) (domain.Publisher, error) {
+	if d.tx == nil {
+		return domain.Publisher{}, errors.New("unable to load the publisher outside a transaction")
+	}
+
+	const query = `
+		SELECT count(*) FROM ad_publications
+		WHERE user_id = $1::uuid AND published_at > now() - make_interval(secs => $2)`
+
+	publisher := domain.Publisher{ID: ownerID}
+	err := d.tx.QueryRowContext(ctx, query, string(ownerID), window.Seconds()).Scan(&publisher.RecentPublications)
+	if err != nil {
+		return domain.Publisher{}, fmt.Errorf("unable to load the publisher: %w", err)
+	}
+
+	return publisher, nil
+}
+
+// RecordPublication records a publication of the owner, dated by the database clock that LoadPublisher counts with.
+func (d *DAO) RecordPublication(ctx context.Context, ownerID domain.UserID) error {
+	if d.tx == nil {
+		return errors.New("unable to record the publication outside a transaction")
+	}
+
+	const query = `INSERT INTO ad_publications (user_id) VALUES ($1::uuid)`
+
+	if _, err := d.tx.ExecContext(ctx, query, string(ownerID)); err != nil {
+		return fmt.Errorf("unable to record the publication: %w", err)
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package mock
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/mock"
 	"github.mpi-internal.com/leboncoin/backend-hiring-assessment/ads/internal/cmd/ads-api/domain"
@@ -84,6 +85,25 @@ func (m *Mock) ReserveImport(ctx context.Context, ownerID domain.UserID, key str
 // CompleteImport returns the error set on the mock.
 func (m *Mock) CompleteImport(ctx context.Context, ownerID domain.UserID, key string, adIDs []domain.AdID) error {
 	return m.Called(ctx, ownerID, key, adIDs).Error(0)
+}
+
+// LockPublisher returns the error set on the mock.
+func (m *Mock) LockPublisher(ctx context.Context, ownerID domain.UserID) error {
+	return m.Called(ctx, ownerID).Error(0)
+}
+
+// LoadPublisher returns the publisher and the error set on the mock.
+func (m *Mock) LoadPublisher(ctx context.Context, ownerID domain.UserID, window time.Duration) (domain.Publisher, error) {
+	args := m.Called(ctx, ownerID, window)
+
+	publisher, _ := args.Get(0).(domain.Publisher)
+
+	return publisher, args.Error(1)
+}
+
+// RecordPublication returns the error set on the mock.
+func (m *Mock) RecordPublication(ctx context.Context, ownerID domain.UserID) error {
+	return m.Called(ctx, ownerID).Error(0)
 }
 
 // Commit returns the error set on the mock.

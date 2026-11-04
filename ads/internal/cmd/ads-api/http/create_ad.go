@@ -20,7 +20,8 @@ type createAdResponse struct {
 	ID int64 `json:"id"`
 }
 
-// handlerCreateAd serves POST /ads.
+// handlerCreateAd serves POST /ads. It answers 429 once the user has published as many ads as the quota allows over
+// the last 24 hours.
 func handlerCreateAd(createAd usecase.CreateAdFunc) http.HandlerFunc {
 	return func(rw http.ResponseWriter, r *http.Request) {
 		var body createAdBody
@@ -36,11 +37,15 @@ func handlerCreateAd(createAd usecase.CreateAdFunc) http.HandlerFunc {
 			OwnerID:    middleware.UserIDFromHeader(r),
 		})
 		if err != nil {
-			if errors.Is(err, domain.ErrInvalidAd) {
+			switch {
+			case errors.Is(err, domain.ErrInvalidAd):
 				rw.WriteHeader(http.StatusBadRequest)
-				return
+			case errors.Is(err, domain.ErrQuotaExceeded):
+				rw.WriteHeader(http.StatusTooManyRequests)
+			default:
+				rw.WriteHeader(http.StatusInternalServerError)
 			}
-			rw.WriteHeader(http.StatusInternalServerError)
+
 			return
 		}
 
