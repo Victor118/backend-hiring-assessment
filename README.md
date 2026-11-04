@@ -101,6 +101,16 @@ Invalid or non-positive values fall back to the default.
 - the title must not be empty (it is trimmed of surrounding spaces);
 - the price must not be negative (`0` is a free ad).
 
+### Publication quota
+
+A user may publish at most 5 ads through `POST /ads` over a rolling 24 hours. Beyond that, `POST /ads` answers `429 Too Many Requests` until the oldest of these publications is more than 24 hours old.
+
+The quota counts publications, not the ads currently online:
+- ads created by the bulk import do not count, and the import is never limited by the quota;
+- deleting an ad does not free a slot, so that deleting and publishing again cannot get around the quota.
+
+Concurrent requests of the same user are serialized, so that they cannot exceed the quota together. The other users are not blocked.
+
 ### Bulk import
 
 `POST /ads/import` creates every ad of the batch or none of them: they are inserted in a single transaction, and one invalid ad rejects the whole batch. An empty batch is rejected with a `400`.

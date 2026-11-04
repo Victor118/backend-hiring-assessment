@@ -68,6 +68,9 @@ paths:
 
     post:
       summary: Create an ad
+      description: |
+        A user may publish at most 5 ads through this endpoint over a rolling 24 hours. Ads created by the bulk import
+        neither count towards this quota nor are limited by it, and deleting an ad does not free a slot.
       operationId: createAd
       tags: [ads]
       security:
@@ -89,6 +92,8 @@ paths:
           description: Malformed body, unknown field, or invalid ad (see CreateAdBody for the rules).
         "401":
           description: Missing Authorization header.
+        "429":
+          description: The user has already published 5 ads over the last 24 hours.
         "500":
           description: Unexpected server error.
 
