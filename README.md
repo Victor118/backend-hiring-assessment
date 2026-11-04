@@ -7,6 +7,8 @@ Once you are satisfied with your work, please send us your repository url.
 
 Please refer to [these instructions](INSTRUCTIONS.md).
 
+See [DELIVERY.md](DELIVERY.md) for what was done for each task, and why.
+
 # Ads API
 
 A small Go HTTP API around a single domain: *ads* (classified ads).
